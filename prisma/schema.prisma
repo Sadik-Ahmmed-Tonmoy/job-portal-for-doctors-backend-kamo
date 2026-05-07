@@ -1,0 +1,781 @@
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  fullName String
+
+  email              String           @unique
+  location           Json?            @db.Json
+  role               UserRole
+  password           String
+  isProfile          Boolean          @default(false)
+  profileImage       String           @default("")
+  stripeCustomerId   String?
+  sentMessages       PrivateMessage[] @relation("SentMessages")
+  receivedMessages   PrivateMessage[] @relation("ReceivedMessages")
+  user1Convarsion    Conversation[]   @relation("User1Convarsion")
+  user2Convarsion    Conversation[]   @relation("User2Convarsion")
+  admin              Admin?
+  isOtpVerify        Boolean          @default(false)
+  profileDetails     Boolean          @default(false)
+  Notifications      Notifications[]
+  reciveNotificaiton Boolean          @default(false)
+  fcmToken           String?
+  isSubscription     Boolean          @default(false)
+  averageRating      Float?           @default(0)
+  totalReviewCount   Float?           @default(0)
+  status             UserStatus       @default(ACTIVE)
+  // planName            SubscriptionType?
+  Otp                Otp[]
+
+  createdAt                  DateTime                @default(now())
+  updatedAt                  DateTime                @updatedAt
+  providerProfile            ProviderProfile?
+  facilityProfile            FacilityProfile?
+  jobPost                    JobPost[]
+  UserSubscription           UserSubscription[]
+  CommunityPost              CommunityPost[]
+  Comment                    Comment[]
+  Like                       Like[]
+  reviewSender               Review[]                @relation("ReviewSender")
+  reviewReceiver             Review[]                @relation("ReviewReceiver")
+  providerUserJobApplication JobApplication[]        @relation("providerUserJobApplication")
+  facilityUserJobApplication JobApplication[]        @relation("facilityUserJobApplication")
+  trackUserFeatureUsages     TrackUserFeatureUsage[]
+  payments                   Payment[]
+  SavedJob                   SavedJob[]
+
+  // @@index([location(type: "2dsphere")])
+  @@map("users")
+}
+
+model Admin {
+  id       String @id @default(auto()) @map("_id") @db.ObjectId
+  nickName String
+  password String
+  country  String
+  city     String
+  state    String
+  bio      String
+  email    String @unique
+  userId   String @unique @db.ObjectId
+  user     User?  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("admins")
+}
+
+model Otp {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @unique @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  otpCode   String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("otps")
+}
+
+model ProviderProfile {
+  id            String     @id @default(auto()) @map("_id") @db.ObjectId
+  provider      Provider[]
+  npiNumber     String?
+  licenceNumber String?
+  phoneNumber   String?    @default("016000000000")
+
+  address       Json?
+  profileImage  String?
+  certification Certification[]
+  stateLicenced StateLicence[]
+  document      Json
+  BLS           Json?
+  ACLS          Json?
+  PALS          Json?
+  DIPLOMA       Json?
+  LICENCE       Json?
+  experience    Experience?
+
+  userId             String               @unique @db.ObjectId
+  user               User?                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  caseTypePreference CaseTypePreference[]
+  callRequest        Boolean              @default(true)
+  radius             Float?
+
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  providerAvailability providerAvailability[]
+
+  @@map("providerProfile")
+}
+
+model providerAvailability {
+  id   String   @id @default(auto()) @map("_id") @db.ObjectId
+  date DateTime
+
+  startTime    DateTime
+  endTime      DateTime
+  availability Boolean
+  profileId    String          @db.ObjectId
+  provider     ProviderProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  @@map("providerAvailability")
+}
+
+model FacilityProfile {
+  id           String               @id @default(auto()) @map("_id") @db.ObjectId
+  profileImage Json?
+  facilityName String
+  address      Json?
+  facilityType FacilityType
+  // ehrSystem     EhrSystem?
+  caseType     CaseTypePreference[]
+  // companySize   String
+  website      String?
+  orLoad       String
+  // certification Certification[]
+  md_do        MD_DO[]
+  userId       String               @unique @db.ObjectId
+  user         User?                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  HrDetails HrDetails[]
+  promotion promotion[]
+
+  @@map("facilityProfile")
+}
+
+model HrDetails {
+  id                String          @id @default(auto()) @map("_id") @db.ObjectId
+  name              String
+  role              HrRole
+  email             String
+  phoneNumber       String
+  facilityProfileId String          @db.ObjectId
+  facilityProfile   FacilityProfile @relation(fields: [facilityProfileId], references: [id], onDelete: Cascade)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@map("hrDetails")
+}
+
+model JobPost {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  userId String @db.ObjectId
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  jobRole           Provider
+  about             String
+  qualification     String
+  minPriceRange     Int
+  maxPriceRange     Int
+  experience        Experience
+  totalCandidate    Int
+  totalAccepted     Int        @default(0)
+  duration          Duration?
+  schedule          Schedule[]
+  totalClicks       String[]
+  totalApplications String[]
+
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  JobApplication JobApplication[]
+  review         Review[]
+  SavedJob       SavedJob[]
+
+  @@index([userId])
+  @@index([jobRole])
+  @@map("jobPost")
+}
+
+model JobApplication {
+  id             String  @id @default(auto()) @map("_id") @db.ObjectId
+  facilityUserId String? @db.ObjectId
+  facilityUser   User?   @relation(fields: [facilityUserId], references: [id], onDelete: Cascade, name: "facilityUserJobApplication")
+  providerUserId String? @db.ObjectId
+  user           User?   @relation(fields: [providerUserId], references: [id], onDelete: Cascade, name: "providerUserJobApplication")
+  jobPostId      String  @db.ObjectId
+  jobPost        JobPost @relation(fields: [jobPostId], references: [id], onDelete: Cascade)
+
+  applier             jobApplier?
+  cancellationReason  String?
+  status              JobStatus                        @default(PENDING)
+  statusAfterApproval JobStatusAfterApprovedByFacility @default(PENDING)
+  appliedAt           DateTime                         @default(now())
+
+  @@unique([providerUserId, jobPostId])
+  @@map("jobApplications")
+}
+
+model SavedJob {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobPostId String   @db.ObjectId
+  jobPost   JobPost  @relation(fields: [jobPostId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, jobPostId])
+  @@map("savedJobs")
+}
+
+model Schedule {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  jobPostId String?  @db.ObjectId
+  jobPost   JobPost? @relation(fields: [jobPostId], references: [id], onDelete: Cascade)
+
+  date      DateTime
+  startTime DateTime
+  endTime   DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("schedule")
+}
+
+model PrivateMessage {
+  id             String        @id @default(auto()) @map("_id") @db.ObjectId
+  senderId       String        @db.ObjectId
+  receiverId     String        @db.ObjectId
+  content        String?
+  imageUrl       String?
+  conversationId String?       @db.ObjectId
+  read           Boolean       @default(false)
+  sender         User?         @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver       User?         @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+  Conversation   Conversation? @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@map("private_messages")
+}
+
+model Conversation {
+  id             String             @id @default(auto()) @map("_id") @db.ObjectId
+  user1Id        String?            @db.ObjectId
+  user2Id        String?            @db.ObjectId
+  lastMessage    String?
+  user1          User?              @relation("User1Convarsion", fields: [user1Id], references: [id], onDelete: Cascade)
+  user2          User?              @relation("User2Convarsion", fields: [user2Id], references: [id], onDelete: Cascade)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  status         ConversationStatus @default(DEACTIVE)
+  privateMessage PrivateMessage[]
+
+  @@unique([user1Id, user2Id])
+  @@map("conversations")
+}
+
+model Notifications {
+  id            String           @id @default(auto()) @map("_id") @db.ObjectId
+  receiverId    String?          @db.ObjectId
+  body          String
+  title         String
+  isRead        Boolean          @default(false)
+  addtionalData Json?
+  type          NotificationType @default(GENERAL)
+  user          User?            @relation(fields: [receiverId], references: [id], onDelete: Cascade)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@map("notifications")
+}
+
+model Subscription {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  pricingId            String?
+  productId            String?
+  interval             IntervalType
+  interval_count       Int
+  role                 UserRole
+  price                Float
+  title                SubscriptionType
+  features             Json                  @db.Json
+  subscriptionFeatures SubscriptionFeature[]
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  UserSubscription     UserSubscription[]
+  payments             Payment[]
+
+  @@map("subscription")
+}
+
+model SubscriptionFeature {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  title          String
+  isGlobal       Boolean @default(false)
+  subscriptionId String  @db.ObjectId
+
+  subscription Subscription      @relation(fields: [subscriptionId], references: [id])
+  feature      Features_Flag
+  featureType  FeatureType
+  limit        Int?
+  frequency    FeatureFrequency?
+  enabled      Boolean
+  extraValue   Int?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  @@unique([subscriptionId, feature])
+}
+
+model UserSubscription {
+  id                String             @id @default(auto()) @map("_id") @db.ObjectId
+  userId            String?            @db.ObjectId
+  user              User?              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscriptionId    String?            @db.ObjectId
+  subscription      Subscription?      @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  priceId           String?
+  subscriptionPayId String?
+  status            SubscriptionStatus @default(PENDING)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  @@unique([userId, subscriptionId])
+  @@unique([userId, priceId])
+  @@map("userSubscription")
+}
+
+model TrackUserFeatureUsage {
+  id          String        @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String        @db.ObjectId
+  user        User          @relation(references: [id], fields: [userId], onDelete: Cascade)
+  feature     Features_Flag
+  featureType FeatureType
+
+  isGlobal  Boolean   @default(false)
+  usedCount Int?      @default(0)
+  limit     Int?      @default(0)
+  expiredAt DateTime? @default(now())
+  isActive  Boolean
+  enabled   Boolean?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([userId, feature])
+  @@map("trackUserFeatureUsage")
+}
+
+model Payment {
+  id                    String        @id @default(auto()) @map("_id") @db.ObjectId
+  userId                String?       @db.ObjectId
+  transactionId         String        @unique
+  subscriptionId        String?       @db.ObjectId
+  stripePaymentIntentId String?
+  subscription          Subscription? @relation(references: [id], onDelete: Cascade, fields: [subscriptionId])
+  user                  User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  paymentIntentId       String
+  paymentType           PaymentType
+  PaymentStatus         PaymentStatus @default(ACTIVE)
+  amount                Float
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+}
+
+model Review {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  senderId String? @db.ObjectId
+  sender   User?   @relation(fields: [senderId], references: [id], onDelete: Cascade, name: "ReviewSender")
+
+  receiverId String? @db.ObjectId
+  receiver   User?   @relation(fields: [receiverId], references: [id], onDelete: Cascade, name: "ReviewReceiver")
+
+  jobPostId String?  @db.ObjectId
+  jobPost   JobPost? @relation(fields: [jobPostId], references: [id])
+
+  @@map("reviews")
+}
+
+model CommunityPost {
+  id       String        @id @default(auto()) @map("_id") @db.ObjectId
+  userId   String?       @db.ObjectId
+  user     User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type     CommunityType @default(FEED)
+  content  String?
+  imageUrl String?
+  videoUrl String?
+
+  promotionId String?    @db.ObjectId
+  promotion   promotion? @relation(fields: [promotionId], references: [id], onDelete: Cascade)
+
+  comments Comment[] @relation("PostComments")
+
+  likes Like[] @relation("PostMainLike")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("community_posts")
+}
+
+model Comment {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  userId String? @db.ObjectId
+  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  postId String?        @db.ObjectId
+  post   CommunityPost? @relation("PostComments", fields: [postId], references: [id], onDelete: Cascade)
+
+  content String
+
+  parentCommentId String?   @db.ObjectId
+  parentComment   Comment?  @relation("CommentReplies", fields: [parentCommentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  replies         Comment[] @relation("CommentReplies")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("comments")
+}
+
+model Like {
+  id     String  @id @default(auto()) @map("_id") @db.ObjectId
+  postId String? @db.ObjectId
+  userId String? @db.ObjectId
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  post CommunityPost? @relation("PostMainLike", fields: [postId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([postId, userId])
+  @@map("likes")
+}
+
+model promotion {
+  id              String          @id @default(auto()) @map("_id") @db.ObjectId
+  facilityId      String          @db.ObjectId
+  facility        FacilityProfile @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  promotionType   PromotionType
+  caption         String
+  promotionImage  String
+  startTime       DateTime
+  endTime         DateTime
+  value           Float
+  promotionStatus PromotionStatus @default(PENDING)
+  CommunityPost   CommunityPost[]
+  createdAt       DateTime        @default(now())
+
+  @@map("promotion")
+}
+
+model ContactUs {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  firstName String
+  lastName  String
+  email     String
+  phone     String
+  message   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("contact_us")
+}
+
+enum PaymentType {
+  SUBSCRIPITON
+  PROMOTION
+}
+
+enum PaymentStatus {
+  ACTIVE
+  PENDING
+  CANCELL
+}
+
+enum FeatureFrequency {
+  NONE
+  DAY
+  WEEK
+  MONTH
+  HOUR
+}
+
+enum SubscriptionType {
+  PRO
+  PREMIUM
+  ELITE
+  FREE
+}
+
+enum CommunityType {
+  PROMOTION
+  FEED
+}
+
+enum PromotionStatus {
+  PENDING
+  ACCEPT
+  REJECT
+  ACTIVE
+  DEACTIVE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PENDING
+  DEACTIVE
+}
+
+enum PromotionType {
+  POST
+  BANNER
+}
+
+enum IntervalType {
+  day
+  week
+  month
+  year
+}
+
+enum FacilityType {
+  SURGICAL_CENTER
+  HOSPITAL
+}
+
+enum HrRole {
+  HR_MANAGER
+}
+
+enum jobApplier {
+  FACILITY
+  PROVIDER
+}
+
+enum UserStatus {
+  ACTIVE
+  BLOCKED
+  DELETED
+  PENDING
+}
+
+enum TimeSlot {
+  MORNING
+  EVENING
+  NIGHT
+  WEEKENDS
+}
+
+enum CaseTypePreference {
+  GENERAL
+  ORTHOPEDIC
+  ENT
+  GI_OR_ENDOSCOPY
+  OB_OR_GYN
+  UROLOGY
+  CARDIAC
+  NEUROSURGERY
+  PEDIATRICS
+  TRAUMA
+  PAIN_MANAGEMENT
+  OPHTHALMOLOGY
+  DENTAL_OR_ORAL_SURGERY
+}
+
+enum UserRole {
+  ADMIN
+  PROVIDER
+  FACILITY
+}
+
+enum Provider {
+  CRNA
+  AA
+  MD_DO
+}
+
+enum JobStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum Duration {
+  DAILY
+  MONTHLY
+}
+
+enum JobStatusAfterApprovedByFacility {
+  INPROGRESS
+  PENDING
+  PAST
+  NO_SHOW
+  COMPLETED
+  REQUESTED
+  CANCELLED
+}
+
+enum MD_DO {
+  STATE_LICENSE
+  BOARD_CERT
+}
+
+enum Certification {
+  BLS
+  ACLS
+  PALS
+  DIPLOMA
+  LICENCE
+}
+
+enum StateLicence {
+  ALABAMA
+  ALASKA
+  ARIZONA
+  ARKANSAS
+  CALIFORNIA
+  COLORADO
+  CONNECTICUT
+  DELAWARE
+  FLORIDA
+  GEORGIA
+  HAWAII
+  IDAHO
+  ILLINOIS
+  INDIANA
+  IOWA
+  KANSAS
+  KENTUCKY
+  LOUISIANA
+  MAINE
+  MARYLAND
+  MASSACHUSETTS
+  MICHIGAN
+  MINNESOTA
+  MISSISSIPPI
+  MISSOURI
+  MONTANA
+  NEBRASKA
+  NEVADA
+  NEW_HAMPSHIRE
+  NEW_JERSEY
+  NEW_MEXICO
+  NEW_YORK
+  NORTH_CAROLINA
+  NORTH_DAKOTA
+  OHIO
+  OKLAHOMA
+  OREGON
+  PENNSYLVANIA
+  RHODE_ISLAND
+  SOUTH_CAROLINA
+  SOUTH_DAKOTA
+  TENNESSEE
+  TEXAS
+  UTAH
+  VERMONT
+  VIRGINIA
+
+  WEST_VIRGINIA
+  WISCONSIN
+  WYOMING
+  DISTRICT_OF_COLUMBIA
+  WASHINGTON
+  // need to remove when db is cleared 
+
+  COLUMBIA
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum Month {
+  JANUARY
+  FEBRUARY
+  MARCH
+  APRIL
+  MAY
+  JUNE
+  JULY
+  AUGUST
+  SEPTEMBER
+  OCTOBER
+  NOVEMBER
+  DECEMBER
+}
+
+enum ConversationStatus {
+  ACTIVE
+  DEACTIVE
+}
+
+enum SOCIALLOGINTYPES {
+  GOOGLE
+  EMAIL_PASSWORD
+}
+
+enum Experience {
+  ONE_TO_TWO_YEARS
+  TWO_TO_THREE_YEARS
+  THREE_TO_FOUR_YEARS
+  FOUR_TO_TEN_YEARS
+}
+
+enum NotificationType {
+  HIREREQUEST
+  JOBAPPLY
+  ACCEPTORDECLINE
+
+  GENERAL
+  CANCELREQUEST
+  PROVIDERJOBREQEST
+  NEW_MESSAGE
+}
+
+enum Features_Flag {
+  JOB_POST
+  JOB_APPLY
+
+  ADVANCED_SEARCH
+
+  DIRECT_MESSAGE
+
+  FULL_CREDENTIAL_ACCESS
+
+  ANALYTICS
+
+  FEATURED_LISTING
+
+  PRIORITY_RANKING
+
+  VIEW_FULL_PROVIDER_PROFILE
+
+  VIEW_FULL_JOB_DETAILS
+
+  EARLY_PREMIUM_JOBS
+  VIEW_PROFILE_VISITORS
+}
+
+enum FeatureType {
+  QUOTA
+  BOOLEAN
+}

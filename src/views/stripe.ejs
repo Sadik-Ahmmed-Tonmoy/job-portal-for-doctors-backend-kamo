@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>KKiaPay Payment Integration</title>
+        <!-- KKiaPay SDK -->
+        <script src="https://cdn.kkiapay.me/kkiapay.min.js" onload="initializePayment()"></script>
+        <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+      }
+      .payment-form {
+        max-width: 400px;
+        margin: 0 auto;
+        padding: 20px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        background-color: #f9f9f9;
+      }
+      .payment-form input {
+        width: 100%;
+        padding: 10px;
+        margin: 10px 0;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+      }
+      .payment-form button {
+        width: 100%;
+        padding: 15px;
+        background-color: #4caf50;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+      .payment-form button:hover {
+        background-color: #45a049;
+      }
+      .message {
+        margin-top: 20px;
+        font-weight: bold;
+      }
+        </style>
+    </head>
+    <body>
+        <h2>Complete Payment</h2>
+        <div class="payment-form">
+            <h3>Enter Payment Details</h3>
+            <form id="paymentForm">
+                <label for="amount">Amount (USD):</label>
+                <input
+                    type="number"
+                    id="amount"
+                    name="amount"
+                    value="20"
+                    required
+                >
+                <label for="phone">Phone Number:</label>
+                <input
+                    type="text"
+                    id="phone"
+                    name="phone"
+                    placeholder="Enter phone number"
+                    required
+                >
+                <label for="email">Email Address:</label>
+                <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    placeholder="Enter your email"
+                    required
+                >
+                <button type="button" id="payButton">Pay Now</button>
+            </form>
+            <div class="message" id="paymentMessage"></div>
+        </div>
+        <script>
+      function initializePayment() {
+        document
+          .getElementById("payButton")
+          .addEventListener("click", function () {
+            // Ensure KKiaPay SDK is loaded
+            if (typeof KKiaPay === "undefined") {
+              alert(
+                "KKiaPay SDK failed to load. Please check your internet connection."
+              );
+              return;
+            }
+
+            // Get input values
+            const amount = document.getElementById("amount").value;
+            const phone = document.getElementById("phone").value;
+            const email = document.getElementById("email").value;
+
+            const paymentData = {
+              amount: amount,
+              phone: phone,
+              email: email,
+              firstName: "John",
+              lastName: "Doe",
+              payment_method: "mobile_money", // Change to "credit_card" if needed
+              publicKey: "14fe6440089911f08ef0e94d9d367999",
+              callback:
+                "http://your-server-url.com/api/v1/kkiapi/payment-webhook", // REPLACE with your server URL
+              currency: "usd",
+            };
+           
+            // Start Payment Process
+            KKiaPay.pay(paymentData, function (response) {
+              const message = document.getElementById("paymentMessage");
+              if (response.success) {
+                message.textContent = "Payment Successful!";
+                message.style.color = "green";
+              } else {
+                message.textContent = "Payment Failed. Please try again.";
+                message.style.color = "red";
+              }
+            });
+          });
+      }
+        </script>
+        
+    </body>
+</html>

@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Braintree Payment Test</title>
+    <script src="https://js.braintreegateway.com/web/dropin/1.39.0/js/dropin.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        padding: 0;
+      }
+      #dropin-container {
+        margin: 20px 0;
+      }
+      button {
+        padding: 10px 20px;
+        background-color: #4caf50;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      button:disabled {
+        background-color: #ccc;
+        cursor: not-allowed;
+      }
+      .form-group {
+        margin: 10px 0;
+      }
+      label {
+        display: block;
+        margin-bottom: 5px;
+      }
+      input {
+        width: 100%;
+        padding: 8px;
+        margin: 5px 0;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+      }
+      .payment-option-btns {
+        margin: 10px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Braintree Payment Test</h1>
+    <div id="dropin-container"></div>
+
+    <div class="form-group">
+      <label for="first-name">First Name</label>
+      <input
+        type="text"
+        id="first-name"
+        placeholder="Enter your first name"
+        required
+      />
+    </div>
+    <div class="form-group">
+      <label for="last-name">Last Name</label>
+      <input
+        type="text"
+        id="last-name"
+        placeholder="Enter your last name"
+        required
+      />
+    </div>
+    <div class="form-group">
+      <label for="cvv">CVV</label>
+      <input type="text" id="cvv" placeholder="Enter CVV" required />
+    </div>
+
+    <!-- Payment Option Buttons -->
+    <div class="payment-option-btns">
+      <button id="paypal-button">Pay with PayPal</button>
+      <button id="venmo-button">Pay with Venmo</button>
+    </div>
+
+    <button id="submit-button" disabled>Pay with Card</button>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", async () => {
+        try {
+          // Fetch the client token using Axios
+          const tokenResponse = await axios.get(
+            "/api/v1/braintree/generate-token"
+          );
+          const tokenData = tokenResponse.data;
+
+          if (tokenData.success) {
+            const clientToken = tokenData.data.clientToken;
+
+            // Initialize Braintree Drop-in UI
+            const dropinInstance = await braintree.dropin.create({
+              authorization: clientToken,
+              container: "#dropin-container",
+              paypal: {
+                flow: "vault", // Use this for Vault flow to return a token
+              },
+              venmo: true, // Enable Venmo button
+            });
+
+            const submitButton = document.getElementById("submit-button");
+            submitButton.disabled = false;
+
+            // Handle the payment submission for Card Payment
+            submitButton.addEventListener("click", async () => {
+              const { nonce } = await dropinInstance.requestPaymentMethod();
+
+              // Get the additional data from custom fields
+              const firstName = document.getElementById("first-name").value;
+              const lastName = document.getElementById("last-name").value;
+              const cvv = document.getElementById("cvv").value;
+
+              // Create a payment payload
+              const paymentPayload = {
+                nonce,
+                amount: "100.00",
+                professionalId: "67679d4e1fa519367238756b",
+                paymentMethod: "credit_card",
+                firstName,
+                lastName,
+                cvv,
+              };
+
+              // Send the payment payload to the backend using Axios
+              const paymentResponse = await axios.post(
+                "/api/v1/braintree/pay",
+                paymentPayload
+              );
+
+              const paymentData = paymentResponse.data;
+
+              if (paymentData.success) {
+                alert("Payment successful: " + paymentData.message);
+              } else {
+                alert("Payment failed: " + paymentData.message);
+              }
+            });
+
+            // Handle PayPal payment
+            const paypalButton = document.getElementById("paypal-button");
+            paypalButton.addEventListener("click", async () => {
+              const { nonce } = await dropinInstance.requestPaymentMethod();
+
+              // Create a payment payload for PayPal
+              const paymentPayload = {
+                nonce,
+                amount: "100.00", // Replace with the actual amount
+                professionalId: "67679d4e1fa519367238756b",
+                paymentMethod: "paypal", // PayPal payment method
+              };
+
+              // Send payment payload to backend
+              const paymentResponse = await axios.post("/pay", paymentPayload);
+              const paymentData = paymentResponse.data;
+
+              if (paymentData.success) {
+                alert("Payment successful: " + paymentData.message);
+              } else {
+                alert("Payment failed: " + paymentData.message);
+              }
+            });
+
+            // Handle Venmo payment
+            const venmoButton = document.getElementById("venmo-button");
+            venmoButton.addEventListener("click", async () => {
+              const { nonce } = await dropinInstance.requestPaymentMethod();
+
+              // Create a payment payload for Venmo
+              const paymentPayload = {
+                nonce,
+                amount: "100.00", // Replace with the actual amount
+                professionalId: "67679d4e1fa519367238756b",
+                paymentMethod: "venmo", // Venmo payment method
+              };
+
+              // Send payment payload to backend
+              const paymentResponse = await axios.post("/pay", paymentPayload);
+              const paymentData = paymentResponse.data;
+
+              if (paymentData.success) {
+                alert("Payment successful: " + paymentData.message);
+              } else {
+                alert("Payment failed: " + paymentData.message);
+              }
+            });
+          } else {
+            alert("Failed to generate client token.");
+          }
+        } catch (error) {
+          console.error("Error initializing payment:", error);
+          alert("An error occurred. Please check the console for details.");
+        }
+      });
+    </script>
+  </body>
+</html>
